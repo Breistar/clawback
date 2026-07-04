@@ -27,7 +27,7 @@ if (existsSync(dist)) {
 
 // API_PORT, not PORT: dev-preview tooling injects PORT for the web server
 const port = Number(process.env.API_PORT ?? 3001);
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`clawback api → http://localhost:${port}`);
   if (!hasVultrKey()) console.log('⚠ no VULTR_INFERENCE_API_KEY — audit runs as a scripted replay');
 });

@@ -1,0 +1,25 @@
+# Clawback — production deploy (local smoke test or Vultr VPS)
+#
+# Quick start:
+#   cp .env.example .env          # add VULTR_INFERENCE_API_KEY
+#   docker compose up -d --build
+#   curl -s http://localhost/api/report
+#
+# Docker Compose reads `.env` in this folder for ${VULTR_INFERENCE_API_KEY}.
+
+services:
+  clawback:
+    build: .
+    container_name: clawback
+    ports:
+      - "80:80"
+    environment:
+      API_PORT: "80"
+      VULTR_INFERENCE_API_KEY: ${VULTR_INFERENCE_API_KEY:-}
+    volumes:
+      # Persist SQLite between restarts (seed runs only on first boot)
+      - clawback-db:/app/server/db
+    restart: unless-stopped
+
+volumes:
+  clawback-db:
