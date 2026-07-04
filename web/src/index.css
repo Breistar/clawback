@@ -1,3 +1,195 @@
 @import "tailwindcss";
 
-/* Design direction is the frontend owner's call — this file starts unopinionated. */
+/*
+ * Clawback design system — warm hospitality palette: a cream working
+ * surface, a navy sidebar, a single gold accent that reads as "this hotel's
+ * brand", and a fixed set of semantic colors (risk/money/verify) so the
+ * glass brain and every status pill read at a glance. Built for a hotel
+ * manager glancing at this between shifts — not a dashboard, an agent log.
+ */
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-ink: #161d2e;
+  --color-ink-soft: #212a41;
+  --color-paper: #f4efe4;
+  --color-paper-raised: #fffdf9;
+  --color-line: #e7ddc9;
+
+  --color-gold: #b8862f;
+  --color-gold-soft: #f3e6c8;
+  --color-ember: #c0392b;
+  --color-ember-soft: #f8e2df;
+  --color-money: #1f8f5f;
+  --color-money-soft: #e1f3ea;
+  --color-verify: #b8862f;
+  --color-verify-soft: #f3e6c8;
+  --color-plan: #3a5a9c;
+  --color-plan-soft: #e8edf7;
+  --color-tool: #7c5cbf;
+  --color-tool-soft: #f0ebfa;
+  --color-retrieve: #2f8f96;
+  --color-retrieve-soft: #e2f2f2;
+}
+
+html {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif { font-family: var(--font-serif); }
+.font-mono { font-family: var(--font-mono); }
+
+::selection {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d8cba9 transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #d8cba9; border-radius: 999px; }
+
+/* ---------- surfaces ---------- */
+
+.panel {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+}
+
+.panel-ink {
+  background: var(--color-ink);
+  border: 1px solid var(--color-ink-soft);
+  border-radius: 16px;
+  color: #eef1fa;
+}
+
+/* ---------- pills ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.pill-money { background: var(--color-money-soft); color: var(--color-money); }
+.pill-ember { background: var(--color-ember-soft); color: var(--color-ember); }
+.pill-verify { background: var(--color-verify-soft); color: var(--color-verify); }
+.pill-gold { background: var(--color-gold-soft); color: var(--color-gold); }
+.pill-neutral { background: #ece5d5; color: #7a7160; }
+.pill-plan { background: var(--color-plan-soft); color: var(--color-plan); }
+.pill-tool { background: var(--color-tool-soft); color: var(--color-tool); }
+.pill-retrieve { background: var(--color-retrieve-soft); color: var(--color-retrieve); }
+
+/* ---------- citation / evidence chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: #ece5d5;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.chip:hover { background: var(--color-gold-soft); border-color: var(--color-gold); color: var(--color-gold); }
+
+/* ---------- glass brain feed ---------- */
+
+.feed-row {
+  border-radius: 10px;
+  border-left: 3px solid var(--color-line);
+  background: var(--color-paper-raised);
+  padding: 0.6rem 0.8rem;
+  animation: feed-in 0.28s ease both;
+}
+.feed-row[data-type="plan"] { border-left-color: var(--color-plan); }
+.feed-row[data-type="retrieve"] { border-left-color: var(--color-retrieve); }
+.feed-row[data-type="finding"] { border-left-color: var(--color-verify); }
+.feed-row[data-type="tool"] { border-left-color: var(--color-tool); }
+.feed-row[data-type="learned"] { border-left-color: var(--color-money); background: var(--color-money-soft); }
+.feed-row[data-type="error"] { border-left-color: var(--color-ember); background: var(--color-ember-soft); }
+.feed-row[data-type="decision-positive"] { border-left-color: var(--color-money); }
+.feed-row[data-type="decision-risk"] { border-left-color: var(--color-ember); }
+.feed-row[data-type="decision-neutral"] { border-left-color: #a89a78; }
+
+@keyframes feed-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- urgency pulse (at-risk countdowns) ---------- */
+
+.pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-ember);
+}
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: var(--color-ember);
+  opacity: 0.5;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* ---------- misc ---------- */
+
+.grid-texture {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.tap { transition: transform 0.08s ease, opacity 0.08s ease; }
+.tap:active { transform: scale(0.97); }
+
+/* ---------- loading skeletons (avoid bare "—" while a number loads) ---------- */
+
+.skeleton {
+  background: linear-gradient(90deg, #ece5d5 25%, #f4efe4 37%, #ece5d5 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- focus states (keyboard users get the same clarity as pointer users) ---------- */
+
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
