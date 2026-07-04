@@ -1,33 +1,37 @@
 @import "tailwindcss";
 
 /*
- * Clawback design system. One agent, one voice: ink + paper for the working
- * surface, a single warm "ember" accent for money/urgency, and a fixed set of
- * event colors so the glass brain reads at a glance. Built for a hotel
- * operator glancing at this between shifts — not a dashboard, an agent log.
+ * Clawback design system — warm hospitality palette: a cream working
+ * surface, a navy sidebar, a single gold accent that reads as "this hotel's
+ * brand", and a fixed set of semantic colors (risk/money/verify) so the
+ * glass brain and every status pill read at a glance. Built for a hotel
+ * manager glancing at this between shifts — not a dashboard, an agent log.
  */
 @theme {
   --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  --color-ink: #0b1220;
-  --color-ink-soft: #141d2e;
-  --color-paper: #f6f7fb;
-  --color-paper-raised: #ffffff;
-  --color-line: #e4e7f0;
+  --color-ink: #161d2e;
+  --color-ink-soft: #212a41;
+  --color-paper: #f4efe4;
+  --color-paper-raised: #fffdf9;
+  --color-line: #e7ddc9;
 
-  --color-ember: #f0562c;
-  --color-ember-soft: #fdece6;
-  --color-money: #0f9d6e;
-  --color-money-soft: #e4f7ef;
-  --color-verify: #b8860a;
-  --color-verify-soft: #fbf1da;
-  --color-plan: #3559e0;
-  --color-plan-soft: #e8edfd;
-  --color-tool: #7c3aed;
-  --color-tool-soft: #f1e9fe;
-  --color-retrieve: #0891b2;
-  --color-retrieve-soft: #e0f5f9;
+  --color-gold: #b8862f;
+  --color-gold-soft: #f3e6c8;
+  --color-ember: #c0392b;
+  --color-ember-soft: #f8e2df;
+  --color-money: #1f8f5f;
+  --color-money-soft: #e1f3ea;
+  --color-verify: #b8862f;
+  --color-verify-soft: #f3e6c8;
+  --color-plan: #3a5a9c;
+  --color-plan-soft: #e8edf7;
+  --color-tool: #7c5cbf;
+  --color-tool-soft: #f0ebfa;
+  --color-retrieve: #2f8f96;
+  --color-retrieve-soft: #e2f2f2;
 }
 
 html {
@@ -41,19 +45,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.font-serif { font-family: var(--font-serif); }
+.font-mono { font-family: var(--font-mono); }
+
 ::selection {
-  background: var(--color-ember-soft);
-  color: var(--color-ember);
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cfd4e3 transparent;
+  scrollbar-color: #d8cba9 transparent;
 }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #cfd4e3; border-radius: 999px; }
-
-.font-mono { font-family: var(--font-mono); }
+*::-webkit-scrollbar-thumb { background: #d8cba9; border-radius: 999px; }
 
 /* ---------- surfaces ---------- */
 
@@ -88,7 +93,8 @@ body {
 .pill-money { background: var(--color-money-soft); color: var(--color-money); }
 .pill-ember { background: var(--color-ember-soft); color: var(--color-ember); }
 .pill-verify { background: var(--color-verify-soft); color: var(--color-verify); }
-.pill-neutral { background: #eef0f6; color: #626a80; }
+.pill-gold { background: var(--color-gold-soft); color: var(--color-gold); }
+.pill-neutral { background: #ece5d5; color: #7a7160; }
 .pill-plan { background: var(--color-plan-soft); color: var(--color-plan); }
 .pill-tool { background: var(--color-tool-soft); color: var(--color-tool); }
 .pill-retrieve { background: var(--color-retrieve-soft); color: var(--color-retrieve); }
@@ -103,13 +109,13 @@ body {
   font-weight: 500;
   padding: 0.1rem 0.45rem;
   border-radius: 6px;
-  background: #eef0f6;
+  background: #ece5d5;
   color: var(--color-ink);
   border: 1px solid var(--color-line);
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
-.chip:hover { background: var(--color-plan-soft); border-color: var(--color-plan); color: var(--color-plan); }
+.chip:hover { background: var(--color-gold-soft); border-color: var(--color-gold); color: var(--color-gold); }
 
 /* ---------- glass brain feed ---------- */
 
@@ -125,10 +131,10 @@ body {
 .feed-row[data-type="finding"] { border-left-color: var(--color-verify); }
 .feed-row[data-type="tool"] { border-left-color: var(--color-tool); }
 .feed-row[data-type="learned"] { border-left-color: var(--color-money); background: var(--color-money-soft); }
-.feed-row[data-type="error"] { border-left-color: #dc2626; background: #fdecec; }
+.feed-row[data-type="error"] { border-left-color: var(--color-ember); background: var(--color-ember-soft); }
 .feed-row[data-type="decision-positive"] { border-left-color: var(--color-money); }
 .feed-row[data-type="decision-risk"] { border-left-color: var(--color-ember); }
-.feed-row[data-type="decision-neutral"] { border-left-color: #9aa2b8; }
+.feed-row[data-type="decision-neutral"] { border-left-color: #a89a78; }
 
 @keyframes feed-in {
   from { opacity: 0; transform: translateY(4px); }
@@ -172,7 +178,7 @@ body {
 /* ---------- loading skeletons (avoid bare "—" while a number loads) ---------- */
 
 .skeleton {
-  background: linear-gradient(90deg, #eef0f6 25%, #f6f7fb 37%, #eef0f6 63%);
+  background: linear-gradient(90deg, #ece5d5 25%, #f4efe4 37%, #ece5d5 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
 }
@@ -184,6 +190,6 @@ body {
 /* ---------- focus states (keyboard users get the same clarity as pointer users) ---------- */
 
 button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
-  outline: 2px solid var(--color-plan);
+  outline: 2px solid var(--color-gold);
   outline-offset: 2px;
 }

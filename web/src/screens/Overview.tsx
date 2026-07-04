@@ -1,18 +1,23 @@
 /**
  * Overview — three money cards (one per agent phase), the North Star chart
- * (OTA share today → projected + annual savings) and the documents the agent
- * has loaded. This is where the agent's output lands; it is not the product.
+ * (OTA share today → projected), a real breakdown of where this month's
+ * exposure sits, and the documents the agent has loaded. This is where the
+ * agent's output lands; it is not the product.
  */
-import { useEffect, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useEffect, useMemo, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
 import { useCountUp } from '../lib/animate';
+import { PageHeader } from '../components/PageHeader';
+import { Icon, type IconName } from '../components/Icon';
+import { AgentAvatar } from '../components/AgentAvatar';
 
 type ReportData = {
   prevented_today: number; disputable_month: number; verify_pending: number;
   recoverable_monthly: number; repeat_guests: number;
   ota_share_today: number; ota_share_projected: number; annual_savings: number;
 };
+type Dispute = { id: number; decision: string; amount: number; status: string };
 
 const DOCUMENTS = [
   { id: 'BKG', name: 'Booking contract', status: 'PARSED' },
@@ -24,37 +29,56 @@ const DOCUMENTS = [
 ];
 const STATUS_CLS: Record<string, string> = { PARSED: 'pill-plan', INDEXED: 'pill-tool', SYNCED: 'pill-money' };
 
-export function Overview({ onRun }: { onRun: () => void }) {
-  const { runAudit, running } = useAuditStream();
+export function Overview() {
+  const { running } = useAuditStream();
   const [r, setR] = useState<ReportData | null>(null);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
   useEffect(() => { getJson<ReportData>('/api/report').then(setR).catch(console.error); }, [running]);
+  useEffect(() => { getJson<Dispute[]>('/api/disputes').then(setDisputes).catch(console.error); }, [running]);
 
-  const chartData = r ? [
-    { label: 'Today', value: r.ota_share_today, fill: 'var(--color-ember)' },
-    { label: 'Projected', value: r.ota_share_projected, fill: 'var(--color-money)' },
+  const shareData = r ? [
+    { label: 'Today', value: r.ota_share_today },
+    { label: 'Projected', value: r.ota_share_projected },
   ] : [];
+
+  const exposureByType = useMemo(() => {
+    const groups: Record<string, { label: string; color: string }> = {
+      AT_RISK: { label: 'At risk', color: 'var(--color-ember)' },
+      DISPUTABLE: { label: 'Disputable', color: 'var(--color-money)' },
+      VERIFY: { label: 'Verify', color: 'var(--color-verify)' },
+    };
+    return Object.entries(groups).map(([decision, g]) => ({
+      ...g,
+      value: disputes.filter((d) => d.decision === decision && d.status === 'open').reduce((s, d) => s + d.amount, 0),
+    }));
+  }, [disputes]);
+
+  const foundThisMonth = r ? r.disputable_month + r.verify_pending : null;
+  const animatedFound = useCountUp(foundThisMonth);
+  const foundCount = disputes.filter((d) => d.status === 'open' && (d.decision === 'DISPUTABLE' || d.decision === 'VERIFY')).length;
 
   return (
     <div className="space-y-6">
+      <PageHeader title="Overview" />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <MoneyCard
-          tone="ember"
-          eyebrow="Sentinel · At risk TODAY"
+          icon="alert" tone="ember"
+          label="At risk today"
           tooltip="Sentinel runs a daily sweep of yesterday's activity, before the OTA invoices it — this is money you can still stop."
           value={r?.prevented_today}
-          detail="Unmarked events caught before invoicing — window closing"
-          urgent
+          detail="Sentinel detected · window closing"
         />
         <MoneyCard
-          tone="money"
-          eyebrow="Auditor · Disputable this month"
+          icon="clock" tone="verify"
+          label="Disputable this month"
           tooltip="The Auditor reconciles this month's invoice line-by-line against the OTA contracts — money already billed that you can claim back."
           value={r?.disputable_month}
           detail={r ? `+ ${mxn(r.verify_pending)} pending verification` : 'found line-by-line vs contracts'}
         />
         <MoneyCard
-          tone="plan"
-          eyebrow="Win-Back · Recoverable every month"
+          icon="trend-up" tone="money"
+          label="Recoverable every month"
           tooltip="Win-Back finds loyal guests who still pay OTA commission out of habit — commission you'd stop paying if they booked direct."
           value={r?.recoverable_monthly}
           detail={`${r?.repeat_guests ?? 0} repeat guests still booking via OTA`}
@@ -63,66 +87,99 @@ export function Overview({ onRun }: { onRun: () => void }) {
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="panel p-5">
-          <div className="mb-1 flex items-baseline justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">North Star — OTA dependency</h2>
-            <span className="font-mono text-xs text-slate-400">annual savings {r ? mxn(r.annual_savings) : '—'} MXN</span>
+          <h2 className="font-serif text-base font-bold text-slate-900">North Star — OTA Dependency</h2>
+          <p className="mb-4 text-sm text-slate-500">Reducing platform dependency as Win-Back offers land.</p>
+          <div className="mb-4 flex flex-wrap items-center gap-4">
+            <Stat label="Today" value={r ? `${r.ota_share_today}%` : '—'} />
+            <Icon name="arrow-right" className="text-slate-300" />
+            <Stat label="Projected" value={r ? `${r.ota_share_projected}%` : '—'} tone="money" />
+            <span className="pill pill-money ml-auto">Annual savings {r ? mxn(r.annual_savings) : '—'} MXN</span>
           </div>
-          <p className="mb-4 text-sm text-slate-500">
-            OTA share of stays, today vs. projected once Win-Back offers land.
-          </p>
-          <div className="h-48">
+          <div className="h-36">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24 }}>
-                <CartesianGrid horizontal={false} stroke="var(--color-line)" />
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="label" width={80} tick={{ fontSize: 13, fill: '#334155', fontWeight: 600 }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v: number) => [`${v}%`, 'OTA share']} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
-                  {chartData.map((d) => <Cell key={d.label} fill={d.fill} />)}
-                  <LabelList dataKey="value" position="right" formatter={(v: number) => `${v}%`} style={{ fontSize: 12, fontWeight: 700, fill: '#334155' }} />
-                </Bar>
-              </BarChart>
+              <LineChart data={shareData} margin={{ left: 4, right: 24, top: 8 }}>
+                <CartesianGrid strokeDasharray="3 5" stroke="var(--color-line)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#9a9078', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#c3b896' }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip formatter={(v: number) => [`${v}%`, 'OTA share']} contentStyle={{ borderRadius: 10, borderColor: 'var(--color-line)', fontSize: 12 }} />
+                <Line type="monotone" dataKey="value" stroke="var(--color-money)" strokeWidth={2.5} dot={{ r: 5, fill: 'var(--color-money)' }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="panel flex flex-col p-5">
-          <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-slate-500">Documents loaded</h2>
+          <h2 className="mb-1 font-serif text-base font-bold text-slate-900">Documents loaded</h2>
           <p className="mb-4 text-sm text-slate-500">What the agent reads before it decides anything.</p>
           <ul className="flex-1 space-y-2">
             {DOCUMENTS.map((d) => (
               <li key={d.id} className="flex items-center justify-between rounded-lg border border-[var(--color-line)] px-3 py-2">
-                <span className="text-sm font-medium text-slate-700">{d.name}</span>
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><Icon name="file" width={15} height={15} className="text-slate-400" />{d.name}</span>
                 <span className={`pill ${STATUS_CLS[d.status]}`}>{d.status}</span>
               </li>
             ))}
           </ul>
-          <button
-            onClick={() => { runAudit(); onRun(); }}
-            disabled={running}
-            className="tap mt-4 w-full rounded-xl bg-[var(--color-ember)] px-4 py-3 text-sm font-bold text-white shadow-sm shadow-orange-900/10 transition-opacity disabled:opacity-60"
-          >
-            {running ? 'Audit running…' : '▶ Run Full Audit'}
-          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+        <div className="panel flex items-center gap-4 p-5">
+          <AgentAvatar size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Found by Clawback this month</div>
+            {animatedFound == null ? (
+              <div className="skeleton mt-1 h-8 w-28 rounded-md" />
+            ) : (
+              <div className="font-mono text-2xl font-extrabold text-[var(--color-gold)]">{mxn(animatedFound)}</div>
+            )}
+            <div className="mt-0.5 text-xs text-slate-500">across {foundCount} open finding{foundCount === 1 ? '' : 's'}</div>
+          </div>
+        </div>
+
+        <div className="panel p-5">
+          <h2 className="font-serif text-base font-bold text-slate-900">Exposure by finding type</h2>
+          <p className="mb-3 text-sm text-slate-500">Where this month's money is sitting, from real audit findings.</p>
+          <div className="h-28">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={exposureByType} layout="vertical" margin={{ left: 8, right: 32 }}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="label" width={72} tick={{ fontSize: 12, fill: '#57503f', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v: number) => [mxn(v), 'Amount']} contentStyle={{ borderRadius: 10, borderColor: 'var(--color-line)', fontSize: 12 }} />
+                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={18}>
+                  {exposureByType.map((d) => <Cell key={d.label} fill={d.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function MoneyCard({ tone, eyebrow, tooltip, value, detail, urgent }: { tone: 'ember' | 'money' | 'plan'; eyebrow: string; tooltip: string; value: number | undefined; detail: string; urgent?: boolean }) {
-  const border = { ember: 'border-t-[var(--color-ember)]', money: 'border-t-[var(--color-money)]', plan: 'border-t-[var(--color-plan)]' }[tone];
+function Stat({ label, value, tone }: { label: string; value: string; tone?: 'money' }) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</div>
+      <div className={`font-mono text-2xl font-extrabold ${tone === 'money' ? 'text-[var(--color-money)]' : 'text-slate-900'}`}>{value}</div>
+    </div>
+  );
+}
+
+function MoneyCard({ icon, tone, label, tooltip, value, detail }: { icon: IconName; tone: 'ember' | 'money' | 'verify'; label: string; tooltip: string; value: number | undefined; detail: string }) {
+  const toneCls = { ember: 'text-[var(--color-ember)] bg-[var(--color-ember-soft)]', money: 'text-[var(--color-money)] bg-[var(--color-money-soft)]', verify: 'text-[var(--color-verify)] bg-[var(--color-verify-soft)]' }[tone];
+  const numCls = { ember: 'text-[var(--color-ember)]', money: 'text-[var(--color-money)]', verify: 'text-[var(--color-verify)]' }[tone];
   const animated = useCountUp(value ?? null);
   return (
-    <div className={`panel border-t-4 ${border} p-5 transition-shadow hover:shadow-md`} title={tooltip}>
-      <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-        {urgent && <span className="pulse-dot" />}
-        {eyebrow}
+    <div className="panel p-5 transition-shadow hover:shadow-md" title={tooltip}>
+      <div className="mb-3 flex items-start justify-between">
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</div>
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${toneCls}`}><Icon name={icon} width={15} height={15} /></span>
       </div>
       {animated == null ? (
-        <div className="skeleton h-9 w-32 rounded-md" />
+        <div className="skeleton h-8 w-32 rounded-md" />
       ) : (
-        <div className="text-3xl font-extrabold tabular-nums text-slate-900">{mxn(animated)}</div>
+        <div className={`font-mono text-2xl font-extrabold tabular-nums ${numCls}`}>{mxn(animated)} <span className="text-sm font-bold">MXN</span></div>
       )}
       <div className="mt-1 text-xs text-slate-500">{detail}</div>
     </div>

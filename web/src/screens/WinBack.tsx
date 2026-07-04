@@ -9,6 +9,8 @@ import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
 import { SegmentPill } from '../components/Pill';
 import { Avatar } from '../components/Avatar';
 import { OtaBadge } from '../components/OtaBadge';
+import { PageHeader } from '../components/PageHeader';
+import { Icon } from '../components/Icon';
 
 type Offer = {
   id: number; guest_name: string; guest_notes: string | null; segment: string; r_days: number; f_stays: number;
@@ -18,12 +20,23 @@ type Offer = {
 export function WinBack() {
   const { running } = useAuditStream();
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [approved, setApproved] = useState<Set<number>>(new Set());
   useEffect(() => { getJson<Offer[]>('/api/winback').then(setOffers).catch(console.error); }, [running]);
+
+  const potentialSavings = offers.filter((o) => !approved.has(o.id)).reduce((s, o) => s + o.burned_per_year / 12, 0);
 
   return (
     <div className="space-y-4">
+      <PageHeader title="Win-Back" />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard icon="users" tone="verify" label="Repeat guests via OTA" value={String(offers.length)} />
+        <StatCard icon="check" tone="money" label="Converted to direct" value={String(approved.size)} />
+        <StatCard icon="trend-up" tone="gold" label="Potential monthly savings" value={`${mxn(potentialSavings)} MXN`} />
+      </div>
+
       <div>
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Repeat guests still booking via OTA</h2>
+        <h2 className="font-serif text-base font-bold text-slate-900">Repeat guests still booking via OTA</h2>
         <p className="text-xs text-slate-500">Segmented by RFM over 18 months. Source: hotel's own PMS guest records — no external data.</p>
       </div>
 
@@ -32,14 +45,29 @@ export function WinBack() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {offers.map((o) => <OfferCard key={o.id} o={o} />)}
+        {offers.map((o) => (
+          <OfferCard key={o.id} o={o} approved={approved.has(o.id)} onApprove={() => setApproved((s) => new Set(s).add(o.id))} />
+        ))}
       </div>
     </div>
   );
 }
 
-function OfferCard({ o }: { o: Offer }) {
-  const [approved, setApproved] = useState(false);
+function StatCard({ icon, tone, label, value }: { icon: 'users' | 'check' | 'trend-up'; tone: 'verify' | 'money' | 'gold'; label: string; value: string }) {
+  const toneCls = { verify: 'text-[var(--color-verify)] bg-[var(--color-verify-soft)]', money: 'text-[var(--color-money)] bg-[var(--color-money-soft)]', gold: 'text-[var(--color-gold)] bg-[var(--color-gold-soft)]' }[tone];
+  const numCls = { verify: 'text-slate-900', money: 'text-slate-900', gold: 'text-[var(--color-gold)]' }[tone];
+  return (
+    <div className="panel p-5">
+      <div className="mb-3 flex items-start justify-between">
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</div>
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${toneCls}`}><Icon name={icon} width={15} height={15} /></span>
+      </div>
+      <div className={`font-mono text-2xl font-extrabold ${numCls}`}>{value}</div>
+    </div>
+  );
+}
+
+function OfferCard({ o, approved, onApprove }: { o: Offer; approved: boolean; onApprove: () => void }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(o.offer_md);
 
@@ -72,7 +100,7 @@ function OfferCard({ o }: { o: Offer }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-[var(--color-line)] p-2 text-sm text-slate-700 focus:border-[var(--color-plan)] focus:outline-none"
+            className="w-full rounded-lg border border-[var(--color-line)] p-2 text-sm text-slate-700 focus:border-[var(--color-gold)] focus:outline-none"
           />
         ) : (
           <p className="text-sm leading-relaxed text-slate-700">{text}</p>
@@ -81,7 +109,7 @@ function OfferCard({ o }: { o: Offer }) {
 
       <div className="mt-4 flex gap-2">
         <button
-          onClick={() => setApproved(true)}
+          onClick={onApprove}
           disabled={approved}
           className="tap flex-1 rounded-lg bg-[var(--color-money)] px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
         >

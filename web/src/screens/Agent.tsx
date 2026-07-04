@@ -4,13 +4,15 @@
  * proof points (plans, retrieves more than once, calls tools, decides) read
  * at a glance without reading a word.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuditStream, type AgentEvent } from '../lib/useAuditStream';
 import { EventTypePill } from '../components/Pill';
 import { DocumentPanel } from '../components/DocumentPanel';
+import { PageHeader } from '../components/PageHeader';
+import { AgentAvatar } from '../components/AgentAvatar';
 
 export function Agent() {
-  const { events, running, runAudit } = useAuditStream();
+  const { events } = useAuditStream();
   const [openDoc, setOpenDoc] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -18,34 +20,66 @@ export function Agent() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [events.length]);
 
+  const stats = useMemo(() => {
+    const allCitations = new Set(events.flatMap((e) => e.citations ?? []));
+    const scanned = [...allCitations].filter((c) => c.startsWith('PMS-')).length;
+    const contracts = new Set([...allCitations].filter((c) => /^(BKG|EXP)-/.test(c)).map((c) => c.slice(0, 3))).size;
+    const windows = events.filter((e) => e.type === 'decision' && e.text.toUpperCase().includes('AT_RISK')).length;
+    const clauses = [...allCitations].filter((c) => c.includes('§')).length;
+    return { scanned, contracts, windows, clauses };
+  }, [events]);
+
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="flex-1 space-y-2">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Live reasoning feed</h2>
-          <button onClick={runAudit} disabled={running} className="tap rounded-full bg-[var(--color-ember)] px-4 py-1.5 text-sm font-bold text-white disabled:opacity-60">
-            {running ? 'Running…' : '▶ Run Full Audit'}
-          </button>
-        </div>
+    <div className="space-y-4">
+      <PageHeader title="Agent — Clawback" />
 
-        {events.length === 0 && (
-          <div className="panel flex flex-col items-center gap-2 px-6 py-16 text-center text-slate-400">
-            <span className="text-3xl">🧠</span>
-            <p className="text-sm">The agent is idle. Run a full audit to watch it plan, retrieve, reason and decide in real time.</p>
+      <div className="panel flex flex-wrap items-center gap-4 p-5">
+        <AgentAvatar size="md" />
+        <div className="flex-1">
+          <div className="rounded-2xl rounded-tl-sm bg-[var(--color-ink)] px-4 py-2.5 text-sm text-white/90">
+            "Every unaccounted night is money the OTA keeps. I watch so you don't have to."
           </div>
-        )}
-
-        <div className="space-y-2">
-          {events.map((e, i) => (e.type === 'phase' ? <PhaseDivider key={i} text={e.text} /> : <EventRow key={i} e={e} onCitation={setOpenDoc} />))}
         </div>
-        <div ref={endRef} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MiniStat label="Scanned" value={stats.scanned} />
+          <MiniStat label="Contracts parsed" value={stats.contracts} />
+          <MiniStat label="Windows tracked" value={stats.windows} />
+          <MiniStat label="Clauses used" value={stats.clauses} />
+        </div>
       </div>
 
-      {openDoc && (
-        <div className="lg:sticky lg:top-20 lg:self-start">
-          <DocumentPanel id={openDoc} onClose={() => setOpenDoc(null)} />
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="flex-1 space-y-2">
+          <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-slate-500">Live reasoning feed</h2>
+
+          {events.length === 0 && (
+            <div className="panel flex flex-col items-center gap-2 px-6 py-16 text-center text-slate-400">
+              <span className="text-3xl">🦉</span>
+              <p className="text-sm">The agent is idle. Run a full audit to watch it plan, retrieve, reason and decide in real time.</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {events.map((e, i) => (e.type === 'phase' ? <PhaseDivider key={i} text={e.text} /> : <EventRow key={i} e={e} onCitation={setOpenDoc} />))}
+          </div>
+          <div ref={endRef} />
         </div>
-      )}
+
+        {openDoc && (
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <DocumentPanel id={openDoc} onClose={() => setOpenDoc(null)} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-[var(--color-gold-soft)] px-3 py-2 text-center">
+      <div className="font-mono text-lg font-extrabold text-[var(--color-gold)]">{value}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
     </div>
   );
 }

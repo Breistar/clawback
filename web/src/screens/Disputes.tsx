@@ -11,6 +11,7 @@ import { DocumentPanel } from '../components/DocumentPanel';
 import { Modal } from '../components/Modal';
 import { OtaBadge } from '../components/OtaBadge';
 import { Markdown } from '../components/Markdown';
+import { PageHeader } from '../components/PageHeader';
 import { useCountdown } from '../lib/countdown';
 
 type Dispute = {
@@ -40,6 +41,8 @@ export function Disputes() {
 
   return (
     <div className="space-y-4">
+      <PageHeader title="Disputes" />
+
       <div className="panel flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Findings</h2>
@@ -108,7 +111,7 @@ export function Disputes() {
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-1.5">
                       {d.memo_md && (
-                        <button onClick={() => setMemoRow(d)} className="tap text-xs font-bold text-[var(--color-plan)] hover:underline">View memo</button>
+                        <button onClick={() => setMemoRow(d)} className="tap text-xs font-bold text-[var(--color-gold)] hover:underline">View memo</button>
                       )}
                       {d.decision === 'AT_RISK' && (
                         <button

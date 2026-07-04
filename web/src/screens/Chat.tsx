@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuditStream } from '../lib/useAuditStream';
 import { DocumentPanel } from '../components/DocumentPanel';
+import { PageHeader } from '../components/PageHeader';
+import { AgentAvatar } from '../components/AgentAvatar';
 
 type Message = { role: 'user' | 'assistant'; content: string; citations?: string[] };
 const HINTS = ['Why did you flag reservation #1284?', "We have a special agreement with Corporativo Mixteca — don't dispute their invoices.", 'Why is #1310 not disputable?'];
@@ -42,51 +44,56 @@ export function Chat() {
   };
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="flex flex-1 flex-col">
-        {ruleBanner && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-[var(--color-money-soft)] px-4 py-2.5 text-sm font-bold text-[var(--color-money)]">
-            ✓ RULE LEARNED: {ruleBanner}
-          </div>
-        )}
+    <div className="space-y-4">
+      <PageHeader title="Chat" />
 
-        <div className="panel flex min-h-[26rem] flex-1 flex-col gap-3 overflow-auto p-4">
-          {messages.length === 0 && (
-            <div className="m-auto max-w-sm space-y-3 text-center">
-              <p className="text-sm text-slate-400">Ask the agent why it decided something, or correct it — corrections become rules.</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {HINTS.map((h) => (
-                  <button key={h} onClick={() => send(h)} className="tap rounded-full border border-[var(--color-line)] px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-[var(--color-plan)] hover:text-[var(--color-plan)]">
-                    {h}
-                  </button>
-                ))}
-              </div>
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="flex flex-1 flex-col">
+          {ruleBanner && (
+            <div className="mb-3 flex items-center gap-2 rounded-lg bg-[var(--color-money-soft)] px-4 py-2.5 text-sm font-bold text-[var(--color-money)]">
+              ✓ RULE LEARNED: {ruleBanner}
             </div>
           )}
-          {messages.map((m, i) => <Bubble key={i} m={m} onCitation={setOpenDoc} />)}
-          {busy && <Bubble m={{ role: 'assistant', content: '…' }} onCitation={setOpenDoc} />}
-          <div ref={endRef} />
+
+          <div className="panel flex min-h-[26rem] flex-1 flex-col gap-3 overflow-auto p-4">
+            {messages.length === 0 && (
+              <div className="m-auto max-w-sm space-y-3 text-center">
+                <AgentAvatar size="lg" />
+                <p className="text-sm text-slate-400">Ask the agent why it decided something, or correct it — corrections become rules.</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {HINTS.map((h) => (
+                    <button key={h} onClick={() => send(h)} className="tap rounded-full border border-[var(--color-line)] px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)]">
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {messages.map((m, i) => <Bubble key={i} m={m} onCitation={setOpenDoc} />)}
+            {busy && <Bubble m={{ role: 'assistant', content: '…' }} onCitation={setOpenDoc} />}
+            <div ref={endRef} />
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && send()}
+              placeholder="Message the agent…"
+              className="flex-1 rounded-xl border border-[var(--color-line)] bg-white px-4 py-2.5 text-sm focus:border-[var(--color-gold)] focus:outline-none"
+            />
+            <button onClick={() => send()} disabled={busy} className="tap rounded-xl bg-[var(--color-ink)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+              Send
+            </button>
+          </div>
         </div>
 
-        <div className="mt-3 flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send()}
-            placeholder="Ask the agent…"
-            className="flex-1 rounded-xl border border-[var(--color-line)] bg-white px-4 py-2.5 text-sm focus:border-[var(--color-plan)] focus:outline-none"
-          />
-          <button onClick={() => send()} disabled={busy} className="tap rounded-xl bg-[var(--color-ember)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-            Send
-          </button>
-        </div>
+        {openDoc && (
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <DocumentPanel id={openDoc} onClose={() => setOpenDoc(null)} />
+          </div>
+        )}
       </div>
-
-      {openDoc && (
-        <div className="lg:sticky lg:top-20 lg:self-start">
-          <DocumentPanel id={openDoc} onClose={() => setOpenDoc(null)} />
-        </div>
-      )}
     </div>
   );
 }
