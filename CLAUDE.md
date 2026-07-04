@@ -35,7 +35,7 @@ No `ANTHROPIC_API_KEY` in `.env` → the audit stream replays a scripted choreog
 - TypeScript strict everywhere; tsx (no compile step server-side).
 - Server env var is `API_PORT` (not `PORT` — preview tools inject PORT for the web server).
 - Money: MXN, always visible in UI (`mxn()` helper). Currency amounts in seed are examples — keep totals consistent across screens when tuning.
-- UI: dark #111820, coral #ff6b4a, Inter + JetBrains Mono (Tailwind v4 theme vars in `web/src/index.css`). English UI; hotel name "Hotel Casa Alaria".
+- UI design is owned by the frontend dev — restyle freely; the prototype's dark/coral palette was only a placeholder. Hard constraints: English UI; hotel name "Hotel Casa Alaria"; money always prominent; event types color/visually coded; citations clickable.
 - The word "dashboard" is BANNED everywhere (UI, README, video, submission copy) — organizers disqualify "any project where a dashboard is the main feature". The screen is "Overview"; the project is an "enterprise agent"; on-screen figures are attributed to the agent phase that produced them.
 - Grep for `TODO(Block N)` — each maps to the 48h plan block in HACKATHON.md §9.
 - Domain rule that drives all audit logic: **commission follows the money the hotel KEPT** (FLEX refunds → commission on retained nights; NR keeps all → full commission is valid). D1 vs D4 is the demo's judgment moment — never break that contrast.

@@ -118,7 +118,7 @@ clawback/
 5. **Margin Report:** the executive one-pager: prevented today + disputable this month + recoverable monthly + North Star + list of actions. (Simple, mostly assembled from prior data.)
 6. **Chat:** manager ↔ agent; supports interrogation + correction; green "✓ RULE LEARNED: …" banner; totals update after corrections.
 
-Visual language: dark (#111820), coral accent (#ff6b4a), Inter + JetBrains Mono for data, thin grid texture. English UI.
+Visual language: **the frontend owner's call** — the prototype palette (dark/coral) was a placeholder proposal, not a decision. Free to restyle entirely. Non-negotiables (function, not aesthetics): English UI · money amounts always prominent · agent-feed event types visually distinguishable at a glance (plan/retrieve/finding/decision) · citation chips clearly clickable · the AT-RISK countdown must read as urgent · never the word "dashboard".
 
 ---
 
