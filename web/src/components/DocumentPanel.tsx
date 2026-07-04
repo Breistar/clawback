@@ -1,6 +1,7 @@
 /** Side panel opened by clicking any citation chip (BKG-§4.2, PMS-1284, …). Resolves either a markdown contract/policy section or a raw DB record via GET /api/documents/:id. */
 import { useEffect, useState } from 'react';
 import { getJson } from '../lib/useAuditStream';
+import { Markdown } from './Markdown';
 
 type DocResult = { kind: 'document' | 'record'; id: string; markdown?: string; data?: unknown };
 
@@ -23,7 +24,7 @@ export function DocumentPanel({ id, onClose }: { id: string; onClose: () => void
       <div className="max-h-[32rem] overflow-auto px-4 py-3 text-sm leading-relaxed">
         {error && <p className="text-rose-600">Could not load {id}.</p>}
         {!doc && !error && <p className="text-slate-400">Loading…</p>}
-        {doc?.kind === 'document' && <pre className="whitespace-pre-wrap font-sans text-[13px] text-slate-700">{doc.markdown}</pre>}
+        {doc?.kind === 'document' && doc.markdown && <Markdown text={doc.markdown} />}
         {doc?.kind === 'record' && (
           <table className="w-full text-[13px]">
             <tbody>

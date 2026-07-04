@@ -4,11 +4,13 @@
  * evidence chips, and the full memo behind a click. D1 vs D4 — same symptom,
  * opposite verdict — is meant to sit side by side here.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
 import { DecisionPill, ConfidencePill } from '../components/Pill';
 import { DocumentPanel } from '../components/DocumentPanel';
 import { Modal } from '../components/Modal';
+import { OtaBadge } from '../components/OtaBadge';
+import { Markdown } from '../components/Markdown';
 import { useCountdown } from '../lib/countdown';
 
 type Dispute = {
@@ -28,15 +30,42 @@ export function Disputes() {
 
   const atRiskWindow = rows.find((r) => r.decision === 'AT_RISK' && r.window_deadline);
 
+  const exposure = useMemo(() => {
+    const open = rows.filter((r) => r.status === 'open' && r.amount > 0);
+    const total = open.reduce((sum, r) => sum + r.amount, 0);
+    const byOta = new Map<string, number>();
+    for (const r of open) byOta.set(r.ota, (byOta.get(r.ota) ?? 0) + r.amount);
+    return { total, byOta: [...byOta.entries()].sort((a, b) => b[1] - a[1]), count: open.length };
+  }, [rows]);
+
   return (
     <div className="space-y-4">
-      <div className="panel flex flex-wrap items-center justify-between gap-2 p-4">
+      <div className="panel flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Findings</h2>
           <p className="text-xs text-slate-500">Booking: 7-day dispute window · Expedia: 14-day dispute window.</p>
         </div>
         {atRiskWindow && <WindowBadge deadline={atRiskWindow.window_deadline} />}
       </div>
+
+      {exposure.count > 0 && (
+        <div className="panel flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Total open exposure</div>
+            <div className="font-mono text-2xl font-extrabold text-slate-900">{mxn(exposure.total)}</div>
+          </div>
+          <div className="h-8 w-px bg-[var(--color-line)]" />
+          <div className="flex flex-wrap gap-4">
+            {exposure.byOta.map(([ota, amount]) => (
+              <div key={ota} className="flex flex-col">
+                <OtaBadge channel={ota} />
+                <span className="mt-0.5 font-mono text-sm font-bold text-slate-700">{mxn(amount)}</span>
+              </div>
+            ))}
+          </div>
+          <span className="ml-auto text-xs text-slate-400">across {exposure.count} open finding{exposure.count === 1 ? '' : 's'}</span>
+        </div>
+      )}
 
       {rows.length === 0 && (
         <div className="panel px-6 py-16 text-center text-sm text-slate-400">No findings yet — run a full audit from Overview or Agent.</div>
@@ -61,7 +90,7 @@ export function Disputes() {
                 <tr key={d.id} className="border-b border-[var(--color-line)] align-top last:border-0 hover:bg-slate-50/60">
                   <td className="px-4 py-3">
                     <div className="font-mono font-semibold text-slate-800">#{d.reservation_id}</div>
-                    <div className="text-xs uppercase text-slate-400">{d.ota}</div>
+                    <OtaBadge channel={d.ota} className="mt-0.5" />
                     {d.decision === 'AT_RISK' && d.window_deadline && <RowCountdown deadline={d.window_deadline} />}
                   </td>
                   <td className="max-w-xs px-4 py-3 text-slate-700">{d.finding}</td>
@@ -111,7 +140,7 @@ export function Disputes() {
             <DecisionPill decision={memoRow.decision} />
             <ConfidencePill confidence={memoRow.confidence} />
           </div>
-          <p className="whitespace-pre-wrap">{memoRow.memo_md}</p>
+          {memoRow.memo_md && <Markdown text={memoRow.memo_md} />}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {memoRow.evidence.map((c) => <span key={c} className="chip cursor-default">{c}</span>)}
           </div>

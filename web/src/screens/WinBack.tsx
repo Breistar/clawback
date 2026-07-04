@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
 import { SegmentPill } from '../components/Pill';
 import { Avatar } from '../components/Avatar';
+import { OtaBadge } from '../components/OtaBadge';
 
 type Offer = {
   id: number; guest_name: string; guest_notes: string | null; segment: string; r_days: number; f_stays: number;
@@ -51,8 +52,9 @@ function OfferCard({ o }: { o: Offer }) {
             <span className="truncate font-bold text-slate-900">{o.guest_name}</span>
             <SegmentPill segment={o.segment} />
           </div>
-          <div className="mt-0.5 font-mono text-xs text-slate-400">
-            R {o.r_days}d · F {o.f_stays}× · M {mxn(o.m_avg)} · via {o.channel}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-slate-400">
+            <span>R {o.r_days}d · F {o.f_stays}× · M {mxn(o.m_avg)}</span>
+            <OtaBadge channel={o.channel} />
           </div>
         </div>
       </div>

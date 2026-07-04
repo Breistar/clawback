@@ -5,6 +5,8 @@
  */
 import { useEffect, useState } from 'react';
 import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
+import { useCountUp } from '../lib/animate';
+import { DecisionPill } from '../components/Pill';
 
 type ReportData = {
   prevented_today: number; disputable_month: number; verify_pending: number;
@@ -26,15 +28,18 @@ export function Report() {
     getJson<Offer[]>('/api/winback').then(setOffers).catch(console.error);
   }, [running]);
 
+  const quarterly = r ? r.disputable_month * 3 + r.recoverable_monthly * 3 : null;
+  const animatedQuarterly = useCountUp(quarterly);
+
   if (!r) return <div className="panel px-6 py-16 text-center text-sm text-slate-400">Run a full audit to generate the report.</div>;
 
-  const quarterly = r.disputable_month * 3 + r.recoverable_monthly * 3;
   const actions = [
     ...disputes.filter((d) => d.status === 'open' && (d.decision === 'AT_RISK' || d.decision === 'DISPUTABLE')).map((d) => ({
       text: d.decision === 'AT_RISK' ? `Mark reservation #${d.reservation_id} on the OTA extranet before the window closes.` : `File dispute for reservation #${d.reservation_id} — ${d.finding}`,
       amount: d.amount,
+      decision: d.decision,
     })),
-    ...offers.map((o) => ({ text: `Send the win-back offer to ${o.guest_name} (${o.segment.toLowerCase()}).`, amount: o.burned_per_visit })),
+    ...offers.map((o) => ({ text: `Send the win-back offer to ${o.guest_name} (${o.segment.toLowerCase()}).`, amount: o.burned_per_visit, decision: 'WIN_BACK' as const })),
   ];
 
   return (
@@ -42,7 +47,7 @@ export function Report() {
       <div className="panel-ink grid-texture p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-widest text-white/50">Margin Report · Hotel Casa Alaria</p>
         <div className="mt-2 flex flex-wrap items-end gap-3">
-          <span className="text-4xl font-extrabold tabular-nums sm:text-5xl">{mxn(quarterly)}</span>
+          <span className="text-4xl font-extrabold tabular-nums sm:text-5xl">{mxn(animatedQuarterly ?? quarterly ?? 0)}</span>
           <span className="pb-1 text-sm text-white/60">projected impact this quarter, MXN</span>
         </div>
         <p className="mt-3 max-w-2xl text-sm text-white/70">
@@ -52,10 +57,10 @@ export function Report() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <ReportStat label="Prevented today" value={mxn(r.prevented_today)} />
-        <ReportStat label="Disputable this month" value={mxn(r.disputable_month)} />
-        <ReportStat label="Pending verification" value={mxn(r.verify_pending)} />
-        <ReportStat label="Recoverable / month" value={mxn(r.recoverable_monthly)} />
+        <ReportStat label="Prevented today" value={r.prevented_today} />
+        <ReportStat label="Disputable this month" value={r.disputable_month} />
+        <ReportStat label="Pending verification" value={r.verify_pending} />
+        <ReportStat label="Recoverable / month" value={r.recoverable_monthly} />
       </div>
 
       <div className="panel p-5">
@@ -68,7 +73,8 @@ export function Report() {
               <li key={i} className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] px-3 py-2.5">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{i + 1}</span>
                 <span className="flex-1 text-sm text-slate-700">{a.text}</span>
-                {a.amount > 0 && <span className="whitespace-nowrap font-mono text-sm font-bold text-slate-900">{mxn(a.amount)}</span>}
+                <DecisionPill decision={a.decision} />
+                {a.amount > 0 && <span className="w-20 shrink-0 whitespace-nowrap text-right font-mono text-sm font-bold text-slate-900">{mxn(a.amount)}</span>}
               </li>
             ))}
           </ol>
@@ -78,11 +84,12 @@ export function Report() {
   );
 }
 
-function ReportStat({ label, value }: { label: string; value: string }) {
+function ReportStat({ label, value }: { label: string; value: number }) {
+  const animated = useCountUp(value);
   return (
     <div className="panel p-4">
       <div className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-1 text-xl font-extrabold tabular-nums text-slate-900">{value}</div>
+      <div className="mt-1 text-xl font-extrabold tabular-nums text-slate-900">{mxn(animated ?? value)}</div>
     </div>
   );
 }

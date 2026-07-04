@@ -168,3 +168,22 @@ body {
 
 .tap { transition: transform 0.08s ease, opacity 0.08s ease; }
 .tap:active { transform: scale(0.97); }
+
+/* ---------- loading skeletons (avoid bare "—" while a number loads) ---------- */
+
+.skeleton {
+  background: linear-gradient(90deg, #eef0f6 25%, #f6f7fb 37%, #eef0f6 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- focus states (keyboard users get the same clarity as pointer users) ---------- */
+
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 2px solid var(--color-plan);
+  outline-offset: 2px;
+}

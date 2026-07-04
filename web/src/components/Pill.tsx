@@ -6,6 +6,7 @@ export function DecisionPill({ decision }: { decision: string }) {
     DISPUTABLE: { cls: 'pill-money', label: '✓ Disputable' },
     NOT_DISPUTABLE: { cls: 'pill-neutral', label: 'Not disputable' },
     VERIFY: { cls: 'pill-verify', label: '◐ Verify' },
+    WIN_BACK: { cls: 'pill-plan', label: 'Win-back' },
   };
   const m = map[decision] ?? { cls: 'pill-neutral', label: decision };
   return <span className={`pill ${m.cls}`}>{m.label}</span>;

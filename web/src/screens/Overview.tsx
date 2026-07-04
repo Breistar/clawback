@@ -4,8 +4,9 @@
  * has loaded. This is where the agent's output lands; it is not the product.
  */
 import { useEffect, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getJson, mxn, useAuditStream } from '../lib/useAuditStream';
+import { useCountUp } from '../lib/animate';
 
 type ReportData = {
   prevented_today: number; disputable_month: number; verify_pending: number;
@@ -39,20 +40,23 @@ export function Overview({ onRun }: { onRun: () => void }) {
         <MoneyCard
           tone="ember"
           eyebrow="Sentinel · At risk TODAY"
-          value={r ? mxn(r.prevented_today) : '—'}
+          tooltip="Sentinel runs a daily sweep of yesterday's activity, before the OTA invoices it — this is money you can still stop."
+          value={r?.prevented_today}
           detail="Unmarked events caught before invoicing — window closing"
           urgent
         />
         <MoneyCard
           tone="money"
           eyebrow="Auditor · Disputable this month"
-          value={r ? mxn(r.disputable_month) : '—'}
+          tooltip="The Auditor reconciles this month's invoice line-by-line against the OTA contracts — money already billed that you can claim back."
+          value={r?.disputable_month}
           detail={r ? `+ ${mxn(r.verify_pending)} pending verification` : 'found line-by-line vs contracts'}
         />
         <MoneyCard
           tone="plan"
           eyebrow="Win-Back · Recoverable every month"
-          value={r ? mxn(r.recoverable_monthly) : '—'}
+          tooltip="Win-Back finds loyal guests who still pay OTA commission out of habit — commission you'd stop paying if they booked direct."
+          value={r?.recoverable_monthly}
           detail={`${r?.repeat_guests ?? 0} repeat guests still booking via OTA`}
         />
       </div>
@@ -75,6 +79,7 @@ export function Overview({ onRun }: { onRun: () => void }) {
                 <Tooltip formatter={(v: number) => [`${v}%`, 'OTA share']} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
                   {chartData.map((d) => <Cell key={d.label} fill={d.fill} />)}
+                  <LabelList dataKey="value" position="right" formatter={(v: number) => `${v}%`} style={{ fontSize: 12, fontWeight: 700, fill: '#334155' }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -105,15 +110,20 @@ export function Overview({ onRun }: { onRun: () => void }) {
   );
 }
 
-function MoneyCard({ tone, eyebrow, value, detail, urgent }: { tone: 'ember' | 'money' | 'plan'; eyebrow: string; value: string; detail: string; urgent?: boolean }) {
+function MoneyCard({ tone, eyebrow, tooltip, value, detail, urgent }: { tone: 'ember' | 'money' | 'plan'; eyebrow: string; tooltip: string; value: number | undefined; detail: string; urgent?: boolean }) {
   const border = { ember: 'border-t-[var(--color-ember)]', money: 'border-t-[var(--color-money)]', plan: 'border-t-[var(--color-plan)]' }[tone];
+  const animated = useCountUp(value ?? null);
   return (
-    <div className={`panel border-t-4 ${border} p-5`}>
+    <div className={`panel border-t-4 ${border} p-5 transition-shadow hover:shadow-md`} title={tooltip}>
       <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
         {urgent && <span className="pulse-dot" />}
         {eyebrow}
       </div>
-      <div className="text-3xl font-extrabold tabular-nums text-slate-900">{value}</div>
+      {animated == null ? (
+        <div className="skeleton h-9 w-32 rounded-md" />
+      ) : (
+        <div className="text-3xl font-extrabold tabular-nums text-slate-900">{mxn(animated)}</div>
+      )}
       <div className="mt-1 text-xs text-slate-500">{detail}</div>
     </div>
   );
