@@ -10,6 +10,7 @@ import { EventTypePill } from '../components/Pill';
 import { DocumentPanel } from '../components/DocumentPanel';
 import { PageHeader } from '../components/PageHeader';
 import { AgentAvatar } from '../components/AgentAvatar';
+import bellhop from '../assets/bellhop.png';
 
 export function Agent() {
   const { events } = useAuditStream();
@@ -54,7 +55,7 @@ export function Agent() {
 
           {events.length === 0 && (
             <div className="panel flex flex-col items-center gap-2 px-6 py-16 text-center text-slate-400">
-              <span className="text-3xl">🦉</span>
+              <img src={bellhop} alt="" className="h-12 w-12 rounded-full object-cover opacity-70" />
               <p className="text-sm">The agent is idle. Run a full audit to watch it plan, retrieve, reason and decide in real time.</p>
             </div>
           )}
