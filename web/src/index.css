@@ -1,3 +1,170 @@
 @import "tailwindcss";
 
-/* Design direction is the frontend owner's call — this file starts unopinionated. */
+/*
+ * Clawback design system. One agent, one voice: ink + paper for the working
+ * surface, a single warm "ember" accent for money/urgency, and a fixed set of
+ * event colors so the glass brain reads at a glance. Built for a hotel
+ * operator glancing at this between shifts — not a dashboard, an agent log.
+ */
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-ink: #0b1220;
+  --color-ink-soft: #141d2e;
+  --color-paper: #f6f7fb;
+  --color-paper-raised: #ffffff;
+  --color-line: #e4e7f0;
+
+  --color-ember: #f0562c;
+  --color-ember-soft: #fdece6;
+  --color-money: #0f9d6e;
+  --color-money-soft: #e4f7ef;
+  --color-verify: #b8860a;
+  --color-verify-soft: #fbf1da;
+  --color-plan: #3559e0;
+  --color-plan-soft: #e8edfd;
+  --color-tool: #7c3aed;
+  --color-tool-soft: #f1e9fe;
+  --color-retrieve: #0891b2;
+  --color-retrieve-soft: #e0f5f9;
+}
+
+html {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-ember-soft);
+  color: var(--color-ember);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cfd4e3 transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #cfd4e3; border-radius: 999px; }
+
+.font-mono { font-family: var(--font-mono); }
+
+/* ---------- surfaces ---------- */
+
+.panel {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+}
+
+.panel-ink {
+  background: var(--color-ink);
+  border: 1px solid var(--color-ink-soft);
+  border-radius: 16px;
+  color: #eef1fa;
+}
+
+/* ---------- pills ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.pill-money { background: var(--color-money-soft); color: var(--color-money); }
+.pill-ember { background: var(--color-ember-soft); color: var(--color-ember); }
+.pill-verify { background: var(--color-verify-soft); color: var(--color-verify); }
+.pill-neutral { background: #eef0f6; color: #626a80; }
+.pill-plan { background: var(--color-plan-soft); color: var(--color-plan); }
+.pill-tool { background: var(--color-tool-soft); color: var(--color-tool); }
+.pill-retrieve { background: var(--color-retrieve-soft); color: var(--color-retrieve); }
+
+/* ---------- citation / evidence chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: #eef0f6;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.chip:hover { background: var(--color-plan-soft); border-color: var(--color-plan); color: var(--color-plan); }
+
+/* ---------- glass brain feed ---------- */
+
+.feed-row {
+  border-radius: 10px;
+  border-left: 3px solid var(--color-line);
+  background: var(--color-paper-raised);
+  padding: 0.6rem 0.8rem;
+  animation: feed-in 0.28s ease both;
+}
+.feed-row[data-type="plan"] { border-left-color: var(--color-plan); }
+.feed-row[data-type="retrieve"] { border-left-color: var(--color-retrieve); }
+.feed-row[data-type="finding"] { border-left-color: var(--color-verify); }
+.feed-row[data-type="tool"] { border-left-color: var(--color-tool); }
+.feed-row[data-type="learned"] { border-left-color: var(--color-money); background: var(--color-money-soft); }
+.feed-row[data-type="error"] { border-left-color: #dc2626; background: #fdecec; }
+.feed-row[data-type="decision-positive"] { border-left-color: var(--color-money); }
+.feed-row[data-type="decision-risk"] { border-left-color: var(--color-ember); }
+.feed-row[data-type="decision-neutral"] { border-left-color: #9aa2b8; }
+
+@keyframes feed-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- urgency pulse (at-risk countdowns) ---------- */
+
+.pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-ember);
+}
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: var(--color-ember);
+  opacity: 0.5;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* ---------- misc ---------- */
+
+.grid-texture {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.tap { transition: transform 0.08s ease, opacity 0.08s ease; }
+.tap:active { transform: scale(0.97); }

@@ -52,3 +52,6 @@ export async function getJson<T>(url: string): Promise<T> {
 }
 
 export const mxn = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+
+export const initials = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
