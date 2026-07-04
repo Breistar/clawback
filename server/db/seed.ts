@@ -4,13 +4,35 @@
  * Amounts follow the spec targets; tune here if screens need rounder totals.
  * Safe to re-run: wipes and rebuilds the whole database.
  */
-import { existsSync, rmSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { getDb, DB_PATH } from './db.ts';
 
-if (existsSync(DB_PATH)) rmSync(DB_PATH);
 const db = getDb();
+
+// Wipe every table in place instead of deleting the .db file. Deleting and
+// recreating the file while another process (e.g. `npm run dev`) still held
+// it open in WAL mode left that process's connection attached to stale/
+// orphaned WAL frames — its next write threw "disk I/O error"
+// (SQLITE_IOERR_SHORT_READ), and even when it didn't crash outright, the
+// running server silently kept serving the old, now-unreachable file
+// instead of the freshly seeded one. Deleting rows through the same
+// getDb() connection every process shares is what actually makes a
+// reseed safe to re-run at any time, dev server up or not.
+db.exec(`
+  DELETE FROM offers;
+  DELETE FROM disputes;
+  DELETE FROM learned_rules;
+  DELETE FROM extranet_log;
+  DELETE FROM invoice_lines;
+  DELETE FROM reservations;
+  DELETE FROM stays;
+  DELETE FROM guests;
+`);
+if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'").get()) {
+  db.exec('DELETE FROM sqlite_sequence'); // reset autoincrement counters so ids stay deterministic across reseeds
+}
 
 const MONTH = '2026-06'; // audited month — its invoice "just arrived" in July
 
