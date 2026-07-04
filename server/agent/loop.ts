@@ -25,27 +25,42 @@ export type Emit = (e: AgentEvent) => void;
 // contexts finish; the reactive retrieval chain happens inside each sub-task.
 const auditOne = (id: number) => `You are in the AUDITOR phase, auditing invoice month 2026-06. Audit reservation ${id} now: pull its PMS record with get_reservation, check its extranet log, find its invoice line (get_invoice_lines for its OTA), retrieve the contract clause and hotel policy the evidence demands, recalculate with commission_calculator, then decide DISPUTABLE, NOT_DISPUTABLE or VERIFY and persist the decision with draft_dispute_memo citing the ids you used. The disputable amount is the commission billed on the invoice line MINUS the correct commission computed on amount_charged (the money the hotel kept) — use commission_calculator on amount_charged to get the correct figure. A missing check-out record forces VERIFY with MEDIUM confidence ONLY when the guest actually stayed (status completed or early_departure) — for a no_show a null check-out is expected and does not weaken the evidence. Be brief: act through tools, not prose.`;
 
-const PHASES: { name: string; tasks: string[] }[] = [
+type SubTask = { task: string; verify: () => boolean };
+const disputeExists = (id: number) => () =>
+  ((getDb().prepare('SELECT COUNT(*) c FROM disputes WHERE reservation_id = ?').get(id) as any).c as number) > 0;
+const offerExists = (segment: string) => () =>
+  ((getDb().prepare('SELECT COUNT(*) c FROM offers WHERE segment = ?').get(segment) as any).c as number) > 0;
+
+const PHASES: { name: string; tasks: SubTask[] }[] = [
   {
     name: 'SENTINEL',
     tasks: [
-      `Phase SENTINEL. Call sentinel_sweep. For each unmarked event: retrieve that OTA's marking-window clause with get_contract_clause, compute the commission at risk with commission_calculator, and persist an AT_RISK finding with draft_dispute_memo including the window deadline as ISO datetime. Every unmarked event needs its memo. Finish with a one-line summary. Be brief: act through tools, not prose.`,
+      {
+        task: `Phase SENTINEL. Call sentinel_sweep. For each unmarked event: retrieve that OTA's marking-window clause AND its commission-rate clause (§2.1) with get_contract_clause — use THAT OTA's percentage, never assume it. Compute the commission at risk with commission_calculator and persist an AT_RISK finding with draft_dispute_memo including the window deadline as ISO datetime. Every unmarked event needs its memo. Finish with a one-line summary. Be brief: act through tools, not prose.`,
+        verify: disputeExists(1327),
+      },
     ],
   },
   {
     name: 'AUDITOR',
     tasks: [
-      `You are in the AUDITOR phase. Call get_learned_rules and state in one line how many exemptions are on file, then audit reservation 1284: ${auditOne(1284).split('now: ')[1]}`,
-      auditOne(1298),
-      auditOne(1305),
-      auditOne(1310),
+      { task: `You are in the AUDITOR phase. Call get_learned_rules and state in one line how many exemptions are on file, then audit reservation 1284: ${auditOne(1284).split('now: ')[1]}`, verify: disputeExists(1284) },
+      { task: auditOne(1298), verify: disputeExists(1298) },
+      { task: auditOne(1305), verify: disputeExists(1305) },
+      { task: auditOne(1310), verify: disputeExists(1310) },
     ],
   },
   {
     name: 'WIN-BACK',
     tasks: [
-      `Phase WIN-BACK. Call run_rfm. Take the CHAMPION guest (per the segment_per_LAD01 field — do not reclassify). Read the offer rules with get_policy on the benefit ladder, call check_availability for the suite upgrade, then persist ONE personalized offer with draft_guest_message: segment from segment_per_LAD01, cross-sell matched to the guest's history and notes, post-stay review invite, never a discount for a champion. Be brief.`,
-      `Phase WIN-BACK continues. Call run_rfm. Take the top LOYAL guest (per segment_per_LAD01 — do not reclassify). Read the offer rules with get_policy on the benefit ladder, then persist ONE personalized offer with draft_guest_message: segment from segment_per_LAD01, direct rate + welcome drink, cross-sell matched to the guest's history and notes, review invite. Be brief.`,
+      {
+        task: `Phase WIN-BACK. Call run_rfm. Take the CHAMPION guest (per the segment_per_LAD01 field — do not reclassify). Read the offer rules with get_policy on the benefit ladder, call check_availability for the suite upgrade, then persist ONE personalized offer with draft_guest_message: segment from segment_per_LAD01, cross-sell matched to the guest's history and notes, post-stay review invite, never a discount for a champion. Be brief.`,
+        verify: offerExists('CHAMPION'),
+      },
+      {
+        task: `Phase WIN-BACK continues. Call run_rfm. Take the top LOYAL guest (per segment_per_LAD01 — do not reclassify). Read the offer rules with get_policy on the benefit ladder, then persist ONE personalized offer with draft_guest_message: segment from segment_per_LAD01, direct rate + welcome drink, cross-sell matched to the guest's history and notes, review invite. Be brief.`,
+        verify: offerExists('LOYAL'),
+      },
     ],
   },
 ];
@@ -62,7 +77,14 @@ export async function runFullAudit(emit: Emit): Promise<void> {
   try {
     for (const phase of PHASES) {
       emit({ type: 'phase', text: phase.name });
-      for (const task of phase.tasks) await runPhase(task, emit);
+      for (const sub of phase.tasks) {
+        // self-healing orchestration: a sub-task that did not persist its
+        // finding gets re-run — the endpoint stalls nondeterministically.
+        for (let attempt = 1; attempt <= 3 && !sub.verify(); attempt++) {
+          if (attempt > 1) console.log(`[loop] sub-task retry ${attempt}`);
+          await runPhase(sub.task, emit);
+        }
+      }
     }
     emit({ type: 'done', text: summaryLine() });
   } catch (err: any) {
