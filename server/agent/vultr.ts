@@ -20,6 +20,13 @@ export function vultrChat(): OpenAI {
     client = new OpenAI({
       baseURL: VULTR_BASE_URL,
       apiKey: process.env.VULTR_INFERENCE_API_KEY,
+      // The SDK default (10 min timeout × up to 2 retries) let one degraded
+      // call stall an entire audit run for a very long time, with the
+      // server's `running` lock held the whole way — from the UI it just
+      // looked permanently stuck. Fail a single call fast instead; the
+      // self-healing sub-task retry in loop.ts already re-runs on failure.
+      timeout: 45_000,
+      maxRetries: 1,
     });
   }
   return client;
@@ -36,6 +43,7 @@ export async function rerank(query: string, documents: string[]): Promise<Rerank
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ model: RETRIEVER_MODEL, query, documents }),
+    signal: AbortSignal.timeout(30_000), // plain fetch has no default timeout — a stalled connection would hang forever otherwise
   });
   if (!res.ok) throw new Error(`rerank failed: ${res.status} ${await res.text()}`);
   const data = (await res.json()) as { results: { index: number; document: { text: string }; relevance_score: number }[] };

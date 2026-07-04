@@ -15,6 +15,13 @@ export const api = Router();
 // ---- audit + SSE ----
 const clients = new Set<(e: AgentEvent) => void>();
 let running = false;
+let runStartedAt = 0;
+// A live-model run that truly hangs (dead Vultr connection, no response ever)
+// used to leave `running` stuck true forever — every future click just got a
+// silent 409 and looked like the button did nothing, with no way out short
+// of restarting the server. Past this age we treat the previous run as
+// abandoned and let a fresh one start instead of blocking indefinitely.
+const STALE_RUN_MS = 8 * 60 * 1000;
 const broadcast = (e: AgentEvent) => clients.forEach((send) => send(e));
 
 api.get('/audit/stream', (req, res) => {
@@ -28,8 +35,11 @@ api.get('/audit/stream', (req, res) => {
 });
 
 api.post('/audit/run', (_req, res) => {
-  if (running) return res.status(409).json({ error: 'audit already running' });
+  if (running && Date.now() - runStartedAt < STALE_RUN_MS) {
+    return res.status(409).json({ error: 'audit already running', runningForMs: Date.now() - runStartedAt });
+  }
   running = true;
+  runStartedAt = Date.now();
   runFullAudit(broadcast).finally(() => { running = false; });
   res.json({ started: true });
 });

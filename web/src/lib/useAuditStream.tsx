@@ -36,8 +36,22 @@ export function AuditStreamProvider({ children }: { children: ReactNode }) {
   const runAudit = async () => {
     setEvents([]);
     setRunning(true);
-    const res = await fetch('/api/audit/run', { method: 'POST' });
-    if (!res.ok) setRunning(false);
+    try {
+      const res = await fetch('/api/audit/run', { method: 'POST' });
+      if (!res.ok) {
+        // A silent no-op here reads as "the button does nothing" — surface
+        // why, in the same feed that shows every other agent event.
+        const body = await res.json().catch(() => ({}) as { error?: string; runningForMs?: number });
+        const text = res.status === 409
+          ? `An audit is already running on the server${body.runningForMs ? ` (started ${Math.round(body.runningForMs / 1000)}s ago)` : ''} — wait for it to finish. If it has been stuck for several minutes, the next click will take over automatically.`
+          : `Could not start the audit (HTTP ${res.status}).`;
+        setEvents([{ type: 'error', text }]);
+        setRunning(false);
+      }
+    } catch {
+      setEvents([{ type: 'error', text: 'Could not reach the server — check that the API is running.' }]);
+      setRunning(false);
+    }
   };
 
   return <AuditCtx.Provider value={{ events, running, ruleBanner, runAudit }}>{children}</AuditCtx.Provider>;
