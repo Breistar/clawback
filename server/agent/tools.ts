@@ -162,8 +162,14 @@ export async function handleTool(name: string, input: any): Promise<unknown> {
 
     case 'save_learned_rule': {
       const r = db.prepare('INSERT INTO learned_rules (rule_text, scope, source) VALUES (?,?,?)').run(input.rule_text, input.scope ?? 'dispute', 'chat');
-      // exempt open disputes that the rule invalidates is Block 6 work; keep the hook here
-      return { saved: true, id: r.lastInsertRowid, rule_text: input.rule_text };
+      // If the rule names reservation ids, exempt their open disputes right away
+      // so every total recomputes (report sums only status='open').
+      const ids = [...new Set(String(input.rule_text).match(/\b\d{4}\b/g) ?? [])];
+      let exempted = 0;
+      for (const id of ids) {
+        exempted += db.prepare("UPDATE disputes SET status='exempted' WHERE reservation_id = ? AND status='open'").run(id).changes;
+      }
+      return { saved: true, id: r.lastInsertRowid, rule_text: input.rule_text, disputes_exempted: exempted };
     }
 
     default:
