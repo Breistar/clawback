@@ -186,6 +186,22 @@ function Chat() {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [localBanner, setLocalBanner] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const banner = ruleBanner ?? localBanner;
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((h) => {
+        if (h?.app !== 'clawback' || h?.chat !== 'sqlite-evidence-v2') {
+          setBackendError(
+            `Wrong API backend (got ${h?.app ?? 'unknown'}). Stop clawback-prototype, set API_PORT=3002 in .env, restart npm run dev.`,
+          );
+        }
+      })
+      .catch(() => setBackendError('Cannot reach /api/health — is the clawback API running?'));
+  }, []);
 
   const send = async () => {
     const text = input.trim();
@@ -194,23 +210,50 @@ function Chat() {
     setBusy(true);
     const next = [...messages, { role: 'user' as const, content: text }];
     setMessages(next);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 120_000);
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history: messages }),
+        signal: ctrl.signal,
       });
       const data = await res.json();
-      setMessages([...next, { role: 'assistant', content: data.reply ?? data.error }]);
+      if (!res.ok) {
+        const fallback = data.reply ?? data.error ?? `HTTP ${res.status}`;
+        throw new Error(fallback);
+      }
+      let reply = (data.reply ?? '').trim();
+      if (/ANTHROPIC_API_KEY|scripted fallback/i.test(reply)) {
+        setBackendError('Connected to clawback-prototype (old API on :3001). Stop it, use API_PORT=3002, restart npm run dev.');
+        reply = 'Wrong backend — see the red banner above. Your question did not reach the clawback server.';
+      }
+      if (!reply) {
+        reply = 'The agent returned an empty response. Try naming a reservation (e.g. "Explain dispute #1284") after running the audit.';
+      }
+      setMessages([...next, { role: 'assistant', content: reply }]);
+      if (data.ruleLearned) {
+        setLocalBanner(data.ruleLearned);
+        setTimeout(() => setLocalBanner(null), 8000);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error && err.name === 'AbortError'
+        ? 'Request timed out after 2 minutes — the inference API may be slow. Retry or check VULTR_INFERENCE_API_KEY on the server.'
+        : err instanceof Error ? err.message : String(err);
+      setMessages([...next, { role: 'assistant', content: `Error: ${msg}` }]);
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   };
 
   return (
     <div className="space-y-2">
+      {backendError && <div className="border border-red-500 bg-red-50 p-2 text-sm text-red-800">{backendError}</div>}
       {ruleBanner && <div className="border p-2 font-bold">✓ RULE LEARNED: {ruleBanner}</div>}
       {messages.map((m, i) => <p key={i}><b>{m.role}:</b> {m.content}</p>)}
+      {busy && <p className="text-gray-500 italic">agent thinking…</p>}
       <div className="flex gap-2">
         <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} className="flex-1 border px-2 py-1" placeholder="Ask the agent…" />
         <button onClick={send} disabled={busy} className="border px-3">Send</button>

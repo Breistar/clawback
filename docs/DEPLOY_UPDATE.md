@@ -217,6 +217,9 @@ cd ~/clawback && git log -1 --oneline
 | Build falla en `better-sqlite3` | `docker compose logs` → suele resolverse reintentando el build; verifica RAM (2 GB) |
 | `curl localhost/api/report` vacío o error | `docker compose ps` — si no está `Up`, `docker compose logs` |
 | Página carga pero audit scripted | Falta o está mal `VULTR_INFERENCE_API_KEY` en `.env` |
+| Chat se queda en "agent thinking…" forever | Versión vieja sin timeout en frontend — `git pull` + `docker compose up -d --build`. El chat tiene límite de 90s en el servidor y 120s en el browser. |
+| Chat responde vacío (burbuja en blanco) | El modelo de Vultr a veces termina sin texto tras tool calls — la versión nueva cae a evidencia de SQLite. Redeploy + correr audit antes de preguntar por una reserva. |
+| Chat offline solo responde #1284 | Versión vieja del backend — redeploy. Sin API key, menciona el número de reserva: `#1284`, `#1310`, etc. |
 | Cambios de UI no se ven | Olvidaste `--build` → `docker compose up -d --build` |
 | Puerto 80 ocupado | `docker compose down` y vuelve a subir; o revisa `docker ps` por otro contenedor |
 

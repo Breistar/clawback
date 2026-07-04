@@ -8,9 +8,18 @@ import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { getDb, DOCUMENTS_DIR } from '../db/db.ts';
 import { runFullAudit, type AgentEvent } from '../agent/loop.ts';
-import { runChatTurn } from './chat.ts';
+import { runChatTurn, CHAT_TURN_TIMEOUT_MS } from './chat.ts';
 
 export const api = Router();
+
+// ---- identity (frontend uses this to detect wrong backend / stale prototype on :3001) ----
+api.get('/health', (_req, res) => {
+  res.json({
+    app: 'clawback',
+    chat: 'sqlite-evidence-v2',
+    port: Number(process.env.API_PORT ?? 3002),
+  });
+});
 
 // ---- audit + SSE ----
 const clients = new Set<(e: AgentEvent) => void>();
@@ -70,11 +79,24 @@ api.post('/chat', async (req, res) => {
   const { message, history } = req.body ?? {};
   if (!message) return res.status(400).json({ error: 'message required' });
   try {
-    const turn = await runChatTurn(message, history ?? []);
+    const turn = await Promise.race([
+      runChatTurn(message, history ?? []),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('chat turn timed out')), CHAT_TURN_TIMEOUT_MS),
+      ),
+    ]);
     if (turn.ruleLearned) broadcast({ type: 'learned', text: turn.ruleLearned });
     res.json(turn);
   } catch (err: any) {
-    res.status(500).json({ error: err?.message ?? String(err) });
+    const msg = err?.message ?? String(err);
+    if (/timed out/i.test(msg)) {
+      return res.status(504).json({
+        error: msg,
+        reply: 'The agent took too long to respond. Try a shorter question about one reservation (e.g. "Explain dispute #1284").',
+        citations: [],
+      });
+    }
+    res.status(500).json({ error: msg });
   }
 });
 
