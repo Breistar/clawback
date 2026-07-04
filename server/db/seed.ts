@@ -4,7 +4,9 @@
  * Amounts follow the spec targets; tune here if screens need rounder totals.
  * Safe to re-run: wipes and rebuilds the whole database.
  */
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, rmSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { getDb, DB_PATH } from './db.ts';
 
 if (existsSync(DB_PATH)) rmSync(DB_PATH);
@@ -79,6 +81,47 @@ for (let id = 6; id <= 50; id++) {
   const nights = between(1, 4);
   stay.run(id, dayStr(back(firstAgo)), dayStr(back(firstAgo - nights)),
     choice(['booking', 'booking', 'expedia', 'direct']), between(3000, 12000), between(0, 1500), 0);
+}
+
+/* ---------- imported guest history (data/guest_history.csv) ----------
+ * Stay-level history with distributions modeled on 12 months of REAL
+ * arrival data from the Oaxaca hotel (fully anonymized upstream — the CSV
+ * carries fictitious names only). Enriches the RFM population toward the
+ * ~200-guest target without touching the audit choreography: these are
+ * stays/guests only, never invoice lines. Dates are all 2025, so none of
+ * them can outrank the choreographed CHAMPION/LOYAL picks (r_days > 180).
+ */
+{
+  const csvPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../data/guest_history.csv');
+  if (existsSync(csvPath)) {
+    const lines = readFileSync(csvPath, 'utf-8').trim().split('\n').slice(1);
+    const SURNAMES = ['Ibarra', 'Quintero', 'Salas', 'Mendieta', 'Rocha', 'Palacios', 'Arriaga', 'Bautista', 'Zepeda', 'Fuentes', 'Montaño', 'Serrano'];
+    const seen = new Map<string, { id: number; count: number }>();
+    let importId = 100;
+    let variant = 0;
+    for (const line of lines) {
+      const [rawName, channel, checkin, nightsStr, revenueStr] = line.split(',');
+      const nights = Number(nightsStr);
+      const revenue = Number(revenueStr);
+      // the fictitious name pool upstream is small — keep at most 2 stays per
+      // name and rename the overflow so the crowd stays wide
+      let name = rawName;
+      let entry = seen.get(rawName);
+      if (entry && entry.count >= 2) {
+        name = `${rawName.split(' ')[0]} ${SURNAMES[variant++ % SURNAMES.length]}`;
+        entry = seen.get(name);
+      }
+      if (!entry) {
+        entry = { id: importId++, count: 0 };
+        seen.set(name, entry);
+        guest.run(entry.id, name, null, checkin, null);
+      }
+      entry.count++;
+      const out = new Date(checkin);
+      out.setDate(out.getDate() + nights);
+      stay.run(entry.id, checkin, dayStr(out), channel, revenue, 0, 0);
+    }
+  }
 }
 
 /* ---------- LR · pre-seeded learned rule (agent must announce "1 exemption on file") ---------- */
