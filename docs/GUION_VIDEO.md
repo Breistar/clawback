@@ -21,7 +21,7 @@
 ## TOMA 4 (0:26–0:38) — Los casos gemelos ⭐ el corazón
 **Contexto:** dos huéspedes reservaron 7 noches y se fueron al día 5 — idénticos en la factura. Al A el hotel le devolvió las noches no usadas (tarifa flexible) → la comisión de más SE DISPUTA ($756). Al B el hotel se quedó todo (no reembolsable) → la comisión es correcta → NO SE DISPUTA. Un detector tonto marcaría ambos; el agente sigue EL DINERO. Eso es criterio.
 **Se ve:** tabla de Disputes con la fila #1284 (DISPUTABLE · $756) y la #1310 (NOT DISPUTABLE) juntas → zoom → click en el chip **BKG-§4.2** → se abre el contrato → 2 seg quieto.
-**Voz (EN):** *"Same symptom, opposite verdicts: this stay gets $756 back — this one doesn't, because the hotel kept the money. Every decision cites its evidence."*
+**Voz (EN):** *"Same symptom — two verdicts. Here, the hotel refunded the guest, so Clawback claims $756 back. Here, the guest paid in full — nothing to dispute. It follows the money, and cites the contract every time."*
 **Conector:** cerramos la fuga #1; la voz abre la #2 con "And it also finds…". Opcional: mini-placa "Leak #1 ✓ → Leak #2: your loyal guests".
 
 ## TOMA 5 (0:38–0:47) — Carlos
@@ -34,7 +34,7 @@
 
 ## TOMA 7 (0:55–1:00) — Cierre
 **Se ve:** Report quieto 2 seg con la cifra grande → funde a placa final: logo + "Built in 48 hours on Vultr Serverless Inference" + "Clawback — claw your money back."
-**Voz (EN):** *"Born from a real hotel in Oaxaca. **Stop paying for bookings that never happened. Clawback — claw your money back.**"* (cierre de Ari — mostrar la frase TAMBIÉN escrita en la placa final)
+**Voz (EN):** *"**Built in 48 hours** — inspired by a real hotel in Oaxaca, México. **Stop paying for bookings that never happened. Clawback — claw your money back.**"* (cierre de Ari — la frase final va TAMBIÉN escrita en la placa. "Inspired by", nunca "born from": el hotel real nos dio el problema, no el producto — cero ambigüedad con la regla de "built entirely during the event")
 
 ---
 
