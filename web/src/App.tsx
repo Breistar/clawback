@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuditStreamProvider } from './lib/useAuditStream';
 import { Sidebar, type Screen } from './components/Sidebar';
 import { RunAuditButton } from './components/RunAuditButton';
@@ -19,6 +19,11 @@ export default function App() {
 
 function Shell() {
   const [screen, setScreen] = useState<Screen>('Overview');
+  useEffect(() => {
+    const onNav = (e: Event) => setScreen((e as CustomEvent).detail as Screen);
+    window.addEventListener('clawback:nav', onNav);
+    return () => window.removeEventListener('clawback:nav', onNav);
+  }, []);
   return (
     <div className="min-h-screen">
       <Sidebar screen={screen} setScreen={setScreen} />

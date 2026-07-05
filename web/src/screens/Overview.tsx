@@ -11,6 +11,8 @@ import { useCountUp } from '../lib/animate';
 import { PageHeader } from '../components/PageHeader';
 import { Icon, type IconName } from '../components/Icon';
 import { AgentAvatar } from '../components/AgentAvatar';
+import { Modal } from '../components/Modal';
+import { Markdown } from '../components/Markdown';
 
 type ReportData = {
   prevented_today: number; disputable_month: number; verify_pending: number;
@@ -20,12 +22,12 @@ type ReportData = {
 type Dispute = { id: number; decision: string; amount: number; status: string };
 
 const DOCUMENTS = [
-  { id: 'BKG', name: 'Booking contract', status: 'PARSED' },
-  { id: 'EXP', name: 'Expedia contract', status: 'PARSED' },
-  { id: 'POL', name: 'Hotel policies', status: 'INDEXED' },
-  { id: 'LAD', name: 'Benefit ladder', status: 'INDEXED' },
-  { id: 'PMS', name: 'PMS reservations', status: 'SYNCED' },
-  { id: 'LOG', name: 'OTA extranet logs', status: 'SYNCED' },
+  { id: 'BKG', name: 'Booking contract', status: 'PARSED', readable: true },
+  { id: 'EXP', name: 'Expedia contract', status: 'PARSED', readable: true },
+  { id: 'POL', name: 'Hotel policies', status: 'INDEXED', readable: true },
+  { id: 'LAD', name: 'Benefit ladder', status: 'INDEXED', readable: true },
+  { id: 'PMS', name: 'PMS reservations', status: 'SYNCED', readable: false },
+  { id: 'LOG', name: 'OTA extranet logs', status: 'SYNCED', readable: false },
 ];
 const STATUS_CLS: Record<string, string> = { PARSED: 'pill-plan', INDEXED: 'pill-tool', SYNCED: 'pill-money' };
 
@@ -56,6 +58,17 @@ export function Overview() {
   const foundThisMonth = r ? r.disputable_month + r.verify_pending : null;
   const animatedFound = useCountUp(foundThisMonth);
   const foundCount = disputes.filter((d) => d.status === 'open' && (d.decision === 'DISPUTABLE' || d.decision === 'VERIFY')).length;
+
+  // full-document viewer for the "Documents loaded" panel
+  const [openDoc, setOpenDoc] = useState<{ id: string; name: string } | null>(null);
+  const [openDocMd, setOpenDocMd] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openDoc) return;
+    setOpenDocMd(null);
+    getJson<{ markdown?: string }>(`/api/documents/${openDoc.id}-full`)
+      .then((d) => setOpenDocMd(d.markdown ?? 'Not available.'))
+      .catch(() => setOpenDocMd('Could not load the document.'));
+  }, [openDoc]);
 
   return (
     <div className="space-y-6">
@@ -113,9 +126,25 @@ export function Overview() {
           <p className="mb-4 text-sm text-slate-500">What the agent reads before it decides anything.</p>
           <ul className="flex-1 space-y-2">
             {DOCUMENTS.map((d) => (
-              <li key={d.id} className="flex items-center justify-between rounded-lg border border-[var(--color-line)] px-3 py-2">
-                <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><Icon name="file" width={15} height={15} className="text-slate-400" />{d.name}</span>
-                <span className={`pill ${STATUS_CLS[d.status]}`}>{d.status}</span>
+              <li key={d.id}>
+                {d.readable ? (
+                  <button
+                    onClick={() => setOpenDoc({ id: d.id, name: d.name })}
+                    title={`Read the full ${d.name.toLowerCase()}`}
+                    className="tap flex w-full items-center justify-between rounded-lg border border-[var(--color-line)] px-3 py-2 text-left transition hover:border-[var(--color-gold)] hover:bg-[var(--color-gold-soft)]"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><Icon name="file" width={15} height={15} className="text-slate-400" />{d.name}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`pill ${STATUS_CLS[d.status]}`}>{d.status}</span>
+                      <Icon name="external" width={13} height={13} className="text-slate-400" />
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between rounded-lg border border-[var(--color-line)] px-3 py-2">
+                    <span className="flex items-center gap-2 text-sm font-medium text-slate-700"><Icon name="file" width={15} height={15} className="text-slate-400" />{d.name}</span>
+                    <span className={`pill ${STATUS_CLS[d.status]}`}>{d.status}</span>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -153,6 +182,11 @@ export function Overview() {
           </div>
         </div>
       </div>
+      {openDoc && (
+        <Modal title={openDoc.name} onClose={() => setOpenDoc(null)}>
+          {openDocMd == null ? <p className="text-slate-400">Loading…</p> : <Markdown text={openDocMd} />}
+        </Modal>
+      )}
     </div>
   );
 }
