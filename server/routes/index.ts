@@ -51,17 +51,28 @@ api.get('/winback', (_req, res) => {
 api.get('/report', (_req, res) => {
   const db = getDb();
   const v = (sql: string) => (db.prepare(sql).get() as any).v ?? 0;
+  const repeatOta = db.prepare(`
+    SELECT COUNT(*) guests, SUM(burn_yr) total FROM (
+      SELECT g.id,
+             ROUND(AVG(s.room_revenue) * (CASE (SELECT channel FROM stays x WHERE x.guest_id = g.id GROUP BY channel ORDER BY COUNT(*) DESC LIMIT 1) WHEN 'booking' THEN 0.17 ELSE 0.15 END)) * (COUNT(*) / 1.5) burn_yr
+      FROM guests g JOIN stays s ON s.guest_id = g.id
+      WHERE (SELECT channel FROM stays x WHERE x.guest_id = g.id GROUP BY channel ORDER BY COUNT(*) DESC LIMIT 1) != 'direct'
+      GROUP BY g.id HAVING COUNT(*) >= 2)
+  `).get() as { guests: number; total: number | null };
   res.json({
     prevented_today: v("SELECT SUM(amount) v FROM disputes WHERE decision='AT_RISK' AND status='open'"),
     disputable_month: v("SELECT SUM(amount) v FROM disputes WHERE decision='DISPUTABLE' AND status='open'"),
     verify_pending: v("SELECT SUM(amount) v FROM disputes WHERE decision='VERIFY' AND status='open'"),
     recoverable_monthly: Math.round(v('SELECT SUM(burned_per_year) v FROM offers') / 12),
     repeat_guests: v('SELECT COUNT(*) v FROM offers'),
+    repeat_guests_found: repeatOta.guests,
     // 58% = room-nights via OTA computed from 12 months of the hotel's real
     // channel data (anonymized aggregate) — not an invented figure
     ota_share_today: 58,
     ota_share_projected: 46,
-    annual_savings: v('SELECT SUM(burned_per_year) v FROM offers'),
+    // North Star projection: commission burned per year across ALL repeat
+    // OTA guests found by RFM — the savings if the hotel converts them
+    annual_savings: Math.round(repeatOta.total ?? 0),
   });
 });
 
