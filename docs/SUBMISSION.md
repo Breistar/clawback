@@ -22,7 +22,7 @@ Every decision is grounded in documents and cites its evidence (contract clause,
 
 **How it meets the track:** core reasoning runs on **Vultr Serverless Inference** (Kimi-K2.6 driving a 13-tool agent loop), and **every document retrieval goes through VultronRetriever** (rerank), whose relevance scores are visible live in the agent's reasoning feed. Deployed on a Vultr VPS. The agent plans, retrieves reactively (a finding triggers the next retrieval), calls tools, makes cited decisions, and outputs artifacts a real hotel team can use on Monday: dispute memos filed within the window, approved guest messages, and an executive margin report.
 
-Born from GROVA's real engagement with an independent hotel in Oaxaca, México (60%+ OTA dependency). Built entirely during the event.
+The problem comes from GROVA's real consulting engagement with an independent hotel in Oaxaca, México (60%+ OTA dependency). The product was built entirely during the event.
 
 ## Links
 - **Live demo:** http://108.61.209.3
