@@ -3,7 +3,7 @@
 **The AI agent that claws your hotel's money back from OTAs.**
 
 Built in 48 hours for the RAISE Summit Hackathon 2026 · Vultr track · Team GROVA
-**Live demo:** http://108.61.209.3 · **Video:** _(link in submission)_
+**Live demo:** http://108.61.209.3 · **Video:** https://youtu.be/KXCn8HMAAfI
 
 ---
 

@@ -25,9 +25,9 @@ Every decision is grounded in documents and cites its evidence (contract clause,
 Born from GROVA's real engagement with an independent hotel in Oaxaca, México (60%+ OTA dependency). Built entirely during the event.
 
 ## Links
-- **Live demo:** http://\<VULTR-IP\>  ← (fill in after deploy)
+- **Live demo:** http://108.61.209.3
 - **Repo:** https://github.com/Breistar/clawback
-- **Video:** \<YouTube/Loom URL\>  ← (fill in after upload)
+- **Video:** https://youtu.be/KXCn8HMAAfI
 
 ## Team
 Team GROVA (remote — Oaxaca, México / Nicaragua / Argentina): Breistar Sánchez (product), Ariadna Ramírez (frontend), Nelson Ramos (backend/deploy), Rodolfo Navarro (demo & submission).
