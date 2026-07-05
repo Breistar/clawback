@@ -25,9 +25,18 @@ if (existsSync(dist)) {
   app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 
-// API_PORT, not PORT: dev-preview tooling injects PORT for the web server
-const port = Number(process.env.API_PORT ?? 3001);
-app.listen(port, '0.0.0.0', () => {
-  console.log(`clawback api → http://localhost:${port}`);
+// API_PORT, not PORT: dev-preview tooling injects PORT for the web server.
+// Default 3002 locally so clawback-prototype can keep :3001 without stealing chat requests.
+const port = Number(process.env.API_PORT ?? 3002);
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+const server = app.listen(port, host, () => {
+  console.log(`clawback api → http://${host}:${port}  (health: /api/health)`);
   if (!hasVultrKey()) console.log('⚠ no VULTR_INFERENCE_API_KEY — audit runs as a scripted replay');
+});
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`✗ Port ${port} already in use. Stop the other process or set API_PORT in .env`);
+    process.exit(1);
+  }
+  throw err;
 });

@@ -20,6 +20,8 @@ export function vultrChat(): OpenAI {
     client = new OpenAI({
       baseURL: VULTR_BASE_URL,
       apiKey: process.env.VULTR_INFERENCE_API_KEY,
+      timeout: 90_000,
+      maxRetries: 1,
     });
   }
   return client;

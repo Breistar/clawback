@@ -65,6 +65,8 @@ curl -s localhost/api/report
 
 4. Navegador: **http://TU-IP** → Agent → Run Full Audit (~3 min)
 
+**Actualizar después del deploy inicial:** [DEPLOY_UPDATE.md](DEPLOY_UPDATE.md) (`git pull` + `docker compose up -d --build` por SSH).
+
 ## Cómo funciona por dentro
 
 ```
